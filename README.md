@@ -7,7 +7,7 @@ This project provides a Go client for interacting with Meta Llama 3 models throu
 This client allows you to:
 
 - Connect to AWS Bedrock service
-- Send prompts to Meta Llama 3 models
+- Send prompts to AWS Bedrock models
 - Process and display model responses
 - Track token usage statistics
 
@@ -37,6 +37,18 @@ go mod tidy
 - AWS CLI: `aws configure`
 - Environment variables: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, and optionally `AWS_SESSION_TOKEN`
 - Shared credentials file: `~/.aws/credentials`
+- **Using a .env file** (recommended for development):
+  - Create a .env file in the project root
+  - Add your AWS credentials and region:
+
+    ```text
+    AWS_ACCESS_KEY_ID=your_access_key_here
+    AWS_SECRET_ACCESS_KEY=your_secret_key_here
+    AWS_REGION=us-east-2
+    ```
+
+  - **Important**: Make sure the region in your .env file matches the region in the modelID ARN (e.g. us-east-2)
+  - The application automatically loads this file using the godotenv package
 
 2. **Amazon Bedrock Access**:
 
@@ -44,7 +56,7 @@ go mod tidy
 - Request and approve model access for Meta Llama 3 in the AWS Bedrock console
 - Create an inference profile and use the ARN in the code in place of the model ID
 
-1. **IAM Permissions**:
+3. **IAM Permissions**:
 Ensure your IAM role or user has the following permissions:
 
 - `bedrock:InvokeModel`
@@ -72,9 +84,6 @@ You can customize the behavior by modifying the following constants in `main.go`
 
 ```go
 const (
-    // AWS region to use
-    awsRegion = "us-east-2"
-
     // Model ID or inference profile ARN
     modelID = "arn:aws:bedrock:us-east-2:913524932967:inference-profile/us.meta.llama3-2-1b-instruct-v1:0"
 
