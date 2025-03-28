@@ -4,6 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
+	"regexp"
+	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -84,11 +87,26 @@ func InvokeModel(ctx context.Context, prompt string, accessKeyId, secretAccessKe
 
 // PrintResponse formats and prints the Llama model response
 func PrintResponse(response *Response) {
-	fmt.Printf("Response: %s\n", response.Generation)
+	output := response.Generation
 
-	// Print token usage information if available
+	// Try to find the JSON array pattern and extract it
+	jsonPattern := regexp.MustCompile(`\[\s*{\s*"series"\s*:\s*"([^"]*)"\s*}\s*\]`)
+	if match := jsonPattern.FindStringSubmatch(output); len(match) > 1 {
+		fmt.Printf("[{\"series\": \"%s\"}]\n", match[1])
+	} else {
+		// Try a fallback approach to extract just the series name
+		seriesPattern := regexp.MustCompile(`"series"\s*:\s*"([^"]*)"`)
+		if match := seriesPattern.FindStringSubmatch(output); len(match) > 1 {
+			fmt.Printf("[{\"series\": \"%s\"}]\n", match[1])
+		} else {
+			// Last resort: try to extract any text that might be the series name
+			fmt.Println(strings.TrimSpace(output))
+		}
+	}
+
+	// Print token usage information if available (as logs to not interfere with JSON output)
 	if response.Usage.InputTokens > 0 || response.Usage.OutputTokens > 0 {
-		fmt.Printf("Input tokens: %d\n", response.Usage.InputTokens)
-		fmt.Printf("Output tokens: %d\n", response.Usage.OutputTokens)
+		log.Printf("Input tokens: %d\n", response.Usage.InputTokens)
+		log.Printf("Output tokens: %d\n", response.Usage.OutputTokens)
 	}
 }

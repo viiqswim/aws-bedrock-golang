@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"regexp"
+	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -129,16 +131,30 @@ func InvokeModel(ctx context.Context, prompt string, accessKeyId, secretAccessKe
 
 // PrintResponse formats and prints the Nova model response
 func PrintResponse(response *Response) {
-	// Extract and print the response text
+	var output string
 	if len(response.Output.Content) > 0 {
-		fmt.Printf("Response: %s\n", response.Output.Content[0].Text)
+		output = response.Output.Content[0].Text
 	} else {
-		fmt.Println("No response content received. This may indicate an issue with the model configuration.")
-		fmt.Println("Please check:\n- Your AWS credentials\n- The model ARN\n- The AWS region")
-		fmt.Printf("Response structure: %+v\n", response)
+		log.Println("No response content received from Nova model")
+		return
 	}
 
-	// Print token usage information if available
-	fmt.Printf("Input tokens: %d\n", response.Usage.InputTokens)
-	fmt.Printf("Output tokens: %d\n", response.Usage.OutputTokens)
+	// Try to find the JSON array pattern and extract it
+	jsonPattern := regexp.MustCompile(`\[\s*{\s*"series"\s*:\s*"([^"]*)"\s*}\s*\]`)
+	if match := jsonPattern.FindStringSubmatch(output); len(match) > 1 {
+		fmt.Printf("[{\"series\": \"%s\"}]\n", match[1])
+	} else {
+		// Try a fallback approach to extract just the series name
+		seriesPattern := regexp.MustCompile(`"series"\s*:\s*"([^"]*)"`)
+		if match := seriesPattern.FindStringSubmatch(output); len(match) > 1 {
+			fmt.Printf("[{\"series\": \"%s\"}]\n", match[1])
+		} else {
+			// Last resort: print the cleaned response
+			fmt.Println(strings.TrimSpace(output))
+		}
+	}
+
+	// Print token usage information as logs to not interfere with JSON output
+	log.Printf("Input tokens: %d\n", response.Usage.InputTokens)
+	log.Printf("Output tokens: %d\n", response.Usage.OutputTokens)
 }

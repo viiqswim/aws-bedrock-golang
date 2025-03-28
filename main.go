@@ -17,21 +17,37 @@ import (
 )
 
 const (
-	// The default prompt to send to the models
-	defaultPrompt = "Hello, how are you"
+	// The template for the series name extraction prompt
+	promptTemplate = `You are a series name extraction tool that ONLY outputs valid JSON.
+
+INPUT: "%s"
+
+INSTRUCTIONS:
+1. Extract ONLY the series name (text that appears before "Season" or "Episode")
+2. Return ONLY a valid JSON array with format: [{"series": "extracted name"}]
+3. DO NOT include any explanation, additional examples, or commentary
+4. The response must contain NOTHING except the JSON array
+
+For example, from "Friends Season 1", extract just "Friends" and output [{"series": "Friends"}]`
 )
 
 func main() {
 	// Define command-line flags
 	modelFlag := flag.String("model", "nova", "The LLM model to use: 'nova', 'llama', 'llama70b', 'claude', or 'deepseek'")
-	promptFlag := flag.String("prompt", defaultPrompt, "The prompt to send to the model")
+	inputSeriesNameFlag := flag.String("input", "", "The input series name to extract")
 
 	// Parse command-line flags
 	flag.Parse()
 
 	// Convert model name to lowercase for case-insensitive comparison
 	modelName := strings.ToLower(*modelFlag)
-	prompt := *promptFlag
+	inputSeriesName := *inputSeriesNameFlag
+	if inputSeriesName == "" {
+		inputSeriesName = "Friends Season 001 Episode 001"
+	}
+
+	// Format the prompt with the input series name
+	prompt := fmt.Sprintf(promptTemplate, inputSeriesName)
 
 	// Validate model selection
 	validModels := map[string]bool{
@@ -44,6 +60,10 @@ func main() {
 
 	if !validModels[modelName] {
 		log.Fatalf("Invalid model specified. Use 'nova', 'llama', 'llama70b', 'claude', or 'deepseek'")
+	}
+
+	if inputSeriesName == "" {
+		log.Fatalf("Input series name cannot be empty. Provide a valid input using the -input flag.")
 	}
 
 	fmt.Println("Loading environment variables...")

@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"regexp"
+	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -16,7 +18,7 @@ import (
 const ModelID = "arn:aws:bedrock:us-east-2:913524932967:inference-profile/us.meta.llama3-3-70b-instruct-v1:0"
 
 // Payload represents the request payload for the Meta Llama 3.3 70B model
-// Note: The structure is the same as Llama 3.2, but we may use different default values
+// Note: The structure is the same as Llama 3.2, but we use different default values
 type Payload struct {
 	Prompt      string  `json:"prompt"`
 	MaxGenLen   int     `json:"max_gen_len"`
@@ -36,7 +38,7 @@ type Response struct {
 // InvokeModel calls the Llama 3.3 70B model with the given prompt
 func InvokeModel(ctx context.Context, prompt string, accessKeyId, secretAccessKey, awsRegion string) (*Response, error) {
 	// Debug output to verify prompt
-	log.Printf("Sending prompt to Llama 3.3 70B model: %s", prompt)
+	log.Printf("=== PROMPT ===\n%s\n============", prompt)
 
 	cfg, err := config.LoadDefaultConfig(ctx,
 		config.WithRegion(awsRegion),
@@ -54,12 +56,12 @@ func InvokeModel(ctx context.Context, prompt string, accessKeyId, secretAccessKe
 	client := bedrockruntime.NewFromConfig(cfg)
 
 	// Prepare payload according to Meta Llama 3.3 70B requirements
-	// Using recommended settings for the 70B model (slightly lower temperature)
+	// Using recommended settings for the 70B model with lower temperature
 	payload := Payload{
 		Prompt:      prompt,
-		MaxGenLen:   512,
-		Temperature: 0.5, // Lower temperature for more deterministic outputs with the 70B model
-		TopP:        0.9,
+		MaxGenLen:   64,   // Reduced from 128 to further limit output
+		Temperature: 0.01, // Further reduced to make output more deterministic
+		TopP:        0.5,  // Reduced to focus on the most likely tokens
 	}
 
 	payloadBytes, err := json.Marshal(payload)
@@ -68,7 +70,7 @@ func InvokeModel(ctx context.Context, prompt string, accessKeyId, secretAccessKe
 	}
 
 	// Debug: Log the payload being sent to the model
-	log.Printf("Llama 3.3 70B payload: %s", string(payloadBytes))
+	log.Printf("=== PAYLOAD ===\n%s\n=============", string(payloadBytes))
 
 	// Create the input for the InvokeModel operation
 	input := &bedrockruntime.InvokeModelInput{
@@ -85,7 +87,7 @@ func InvokeModel(ctx context.Context, prompt string, accessKeyId, secretAccessKe
 	}
 
 	// Debug: Log the raw response
-	log.Printf("Raw Llama 3.3 70B response: %s", string(output.Body))
+	log.Printf("=== RAW RESPONSE ===\n%s\n==================", string(output.Body))
 
 	var response Response
 	if err := json.Unmarshal(output.Body, &response); err != nil {
@@ -94,18 +96,31 @@ func InvokeModel(ctx context.Context, prompt string, accessKeyId, secretAccessKe
 
 	// Debug: Log the parsed response structure
 	responseBytes, _ := json.MarshalIndent(response, "", "  ")
-	log.Printf("Parsed Llama 3.3 70B response: %s", string(responseBytes))
+	log.Printf("=== PARSED RESPONSE ===\n%s\n=====================", string(responseBytes))
 
 	return &response, nil
 }
 
 // PrintResponse formats and prints the Llama 3.3 70B model response
 func PrintResponse(response *Response) {
-	fmt.Printf("Response: %s\n", response.Generation)
+	output := response.Generation
 
-	// Print token usage information if available
-	if response.Usage.InputTokens > 0 || response.Usage.OutputTokens > 0 {
-		fmt.Printf("Input tokens: %d\n", response.Usage.InputTokens)
-		fmt.Printf("Output tokens: %d\n", response.Usage.OutputTokens)
+	// Try to find the JSON array pattern and extract it
+	jsonPattern := regexp.MustCompile(`\[\s*{\s*"series"\s*:\s*"([^"]*)"\s*}\s*\]`)
+	if match := jsonPattern.FindStringSubmatch(output); len(match) > 1 {
+		fmt.Printf("[{\"series\": \"%s\"}]\n", match[1])
+	} else {
+		// Try a fallback approach to extract just the series name
+		seriesPattern := regexp.MustCompile(`"series"\s*:\s*"([^"]*)"`)
+		if match := seriesPattern.FindStringSubmatch(output); len(match) > 1 {
+			fmt.Printf("[{\"series\": \"%s\"}]\n", match[1])
+		} else {
+			// Last resort: print the cleaned response
+			fmt.Println(strings.TrimSpace(output))
+		}
 	}
+
+	// Print token usage information as logs
+	log.Printf("Input tokens: %d\n", response.Usage.InputTokens)
+	log.Printf("Output tokens: %d\n", response.Usage.OutputTokens)
 }

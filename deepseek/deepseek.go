@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"regexp"
+	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -125,15 +127,30 @@ func InvokeModel(ctx context.Context, prompt string, accessKeyId, secretAccessKe
 
 // PrintResponse formats and prints the DeepSeek model response
 func PrintResponse(response *Response) {
-	// Extract and print the response text
+	var output string
 	if len(response.Choices) > 0 {
-		fmt.Printf("Response: %s\n", response.Choices[0].Message.Content)
+		output = response.Choices[0].Message.Content
 	} else {
-		fmt.Println("No response content received from DeepSeek model")
-		fmt.Printf("Response structure: %+v\n", response)
+		log.Println("No response content received from DeepSeek model")
+		return
 	}
 
-	// Print token usage information if available
-	fmt.Printf("Input tokens: %d\n", response.Usage.InputTokens)
-	fmt.Printf("Output tokens: %d\n", response.Usage.OutputTokens)
+	// Try to find the JSON array pattern and extract it
+	jsonPattern := regexp.MustCompile(`\[\s*{\s*"series"\s*:\s*"([^"]*)"\s*}\s*\]`)
+	if match := jsonPattern.FindStringSubmatch(output); len(match) > 1 {
+		fmt.Printf("[{\"series\": \"%s\"}]\n", match[1])
+	} else {
+		// Try a fallback approach to extract just the series name
+		seriesPattern := regexp.MustCompile(`"series"\s*:\s*"([^"]*)"`)
+		if match := seriesPattern.FindStringSubmatch(output); len(match) > 1 {
+			fmt.Printf("[{\"series\": \"%s\"}]\n", match[1])
+		} else {
+			// Last resort: print the cleaned response
+			fmt.Println(strings.TrimSpace(output))
+		}
+	}
+
+	// Print token usage information if available (as logs to not interfere with JSON output)
+	log.Printf("Input tokens: %d\n", response.Usage.InputTokens)
+	log.Printf("Output tokens: %d\n", response.Usage.OutputTokens)
 }
