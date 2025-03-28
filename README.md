@@ -1,6 +1,6 @@
-# AWS Bedrock Llama 3 Go Client
+# LLM Series Name Extractor (Go)
 
-This project provides a Go client for interacting with Meta Llama 3 models through Amazon Bedrock. It demonstrates how to use the AWS SDK for Go to send prompts to Llama 3 and process the responses.
+This project provides a simple Go interface for interacting with AWS Bedrock LLM models (Llama, Llama 3.3 70B, Nova, Claude, and DeepSeek).
 
 ## Project Overview
 
@@ -13,20 +13,32 @@ This client allows you to:
 
 ## Prerequisites
 
-- Go 1.18 or later
-- An AWS account with Amazon Bedrock access
-- Permissions to use Meta Llama 3 models in Bedrock
-- AWS credentials configured on your system
+- Go 1.16 or higher
+- AWS account with access to AWS Bedrock
+- Appropriate IAM permissions to invoke Bedrock models
 
-## Installation
+## Setup
 
 1. Clone the repository:
 
-2. Install the required dependencies:
+   ```
+   git clone <repository-url>
+   cd llm-series-name-extractor-go
+   ```
 
-```bash
-go mod tidy
-```
+2. Install dependencies:
+
+   ```
+   go mod tidy
+   ```
+
+3. Set up environment variables by creating a `.env` file:
+
+   ```
+   AWS_ACCESS_KEY_ID=your_aws_access_key
+   AWS_SECRET_ACCESS_KEY=your_aws_secret_key
+   AWS_REGION=us-east-2
+   ```
 
 ## AWS Configuration
 
@@ -65,7 +77,50 @@ Ensure your IAM role or user has the following permissions:
 
 ## Usage
 
-### Running the Application
+### Command-line Arguments
+
+The application supports the following command-line arguments:
+
+#### Selecting the LLM Model
+
+You can specify which model to use with the `-model` flag:
+
+```bash
+# To use the Nova model (default)
+go run main.go -model=nova
+
+# To use the Llama 3.2 1B model
+go run main.go -model=llama
+
+# To use the Llama 3.3 70B model
+go run main.go -model=llama70b
+
+# To use the Claude 3 Sonnet model
+go run main.go -model=claude
+
+# To use the DeepSeek model
+go run main.go -model=deepseek
+```
+
+#### Customizing the Prompt
+
+You can provide a custom prompt with the `-prompt` flag:
+
+```bash
+go run main.go -prompt="Explain quantum computing in simple terms"
+```
+
+#### Combining Options
+
+You can combine both options:
+
+```bash
+go run main.go -model=llama -prompt="What are the benefits of GraphQL over REST?"
+```
+
+### Basic Usage
+
+Run the application with default settings (uses Nova model):
 
 ```bash
 go run main.go
@@ -74,9 +129,41 @@ go run main.go
 By default, the application will:
 
 1. Connect to AWS Bedrock using your credentials
-2. Send the configured prompt to the Llama 3 model
+2. Send the default prompt to the selected model
 3. Display the model's response
 4. Show token usage information if available
+
+### Examples
+
+#### Example 1: Ask Nova about a topic
+
+```bash
+go run main.go -model=nova -prompt="What are the key features of Go programming language?"
+```
+
+#### Example 2: Use Llama for creative writing
+
+```bash
+go run main.go -model=llama -prompt="Write a short poem about programming"
+```
+
+#### Example 3: Use Claude for complex reasoning
+
+```bash
+go run main.go -model=claude -prompt="Explain the pros and cons of microservices architecture"
+```
+
+#### Example 4: Use DeepSeek for code generation
+
+```bash
+go run main.go -model=deepseek -prompt="Write a function in Go that checks if a string is a palindrome"
+```
+
+#### Example 5: Use Llama 3.3 70B for complex reasoning
+
+```bash
+go run main.go -model=llama70b -prompt="Compare and contrast different approaches to natural language processing"
+```
 
 ### Configuration Options
 
@@ -84,21 +171,38 @@ You can customize the behavior by modifying the following constants in `main.go`
 
 ```go
 const (
-    // Model ID or inference profile ARN
-    modelID = "arn:aws:bedrock:us-east-2:913524932967:inference-profile/us.meta.llama3-2-1b-instruct-v1:0"
-
-    // Prompt to send to the model
-    prompt = "Hello, how are you"
+    // Default prompt to send to the model if none provided
+    defaultPrompt = "Hello, how are you"
 )
 ```
 
 ### Model Parameters
 
-The following parameters can be adjusted in the `Payload` struct:
+The following parameters can be adjusted in each model's implementation:
 
-- `MaxGenLen`: Maximum length of the generated response (default: 512)
-- `Temperature`: Controls randomness in the output (default: 0.7)
-- `TopP`: Controls diversity via nucleus sampling (default: 0.9)
+- For Llama 3.2 1B:
+  - `MaxGenLen`: Maximum length of the generated response (default: 512)
+  - `Temperature`: Controls randomness in the output (default: 0.7)
+  - `TopP`: Controls diversity via nucleus sampling (default: 0.9)
+  
+- For Llama 3.3 70B:
+  - `MaxGenLen`: Maximum length of the generated response (default: 512)
+  - `Temperature`: Controls randomness in the output (default: 0.5)
+  - `TopP`: Controls diversity via nucleus sampling (default: 0.9)
+  
+- For Nova:
+  - `MaxNewTokens`: Maximum number of tokens to generate (default: 512)
+  - `Temperature`: Controls randomness in the output (default: 0.7)
+  - `TopP`: Controls diversity via nucleus sampling (default: 0.9)
+  
+- For Claude:
+  - `MaxTokens`: Maximum tokens to generate (default: 200)
+  - `TopK`: Number of tokens to consider for sampling (default: 250)
+  - `Temperature`: Controls randomness (default: 1.0)
+  - `TopP`: Controls diversity via nucleus sampling (default: 0.999)
+
+- For DeepSeek:
+  - `MaxTokens`: Maximum tokens to generate (default: 512)
 
 ## Error Handling
 

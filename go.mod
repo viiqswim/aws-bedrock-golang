@@ -7,6 +7,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/config v1.29.10
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.63
 	github.com/aws/aws-sdk-go-v2/service/bedrockruntime v1.26.1
+	github.com/joho/godotenv v1.5.1
 )
 
 require (
@@ -21,5 +22,4 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.29.2 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sts v1.33.17 // indirect
 	github.com/aws/smithy-go v1.22.2 // indirect
-	github.com/joho/godotenv v1.5.1 // indirect
 )
